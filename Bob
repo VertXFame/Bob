@@ -1,0 +1,146 @@
+class Product:
+    def __init__(self, name, price):
+        self.name = name
+        self.price = price
+
+
+class Cart:
+    def __init__(self):
+        self.items = []
+
+    def add(self, product):
+        self.items.append(product)
+        print(f"{product.name} добавлен в корзину")
+
+    def remove(self, product_name):
+        for product in self.items:
+            if product.name == product_name:
+                self.items.remove(product)
+                print(f"{product_name} удалён из корзины")
+                return
+        print("Товар не найден в корзине")
+
+    def get_total(self):
+        total = 0
+        for product in self.items:
+            total += product.price
+        return total
+
+    def show(self):
+        if not self.items:
+            print("Корзина пустая")
+            return
+
+        print("В корзине:")
+        for product in self.items:
+            print(f"- {product.name} : {product.price}")
+        print(f"Итого: {self.get_total()}")
+
+    def clear(self):
+        self.items.clear()
+
+
+class Shop:
+    def __init__(self):
+        self.products = {
+            "яблоко": Product("яблоко", 50),
+            "банан": Product("банан", 30),
+            "хлеб": Product("хлеб", 40),
+            "молоко": Product("молоко", 60),
+        }
+
+    def show_products(self):
+        print("Товары:")
+        for product in self.products.values():
+            print(f"{product.name} - {product.price}")
+
+    def get_product_by_name(self, name):
+        return self.products.get(name)
+
+
+class User:
+    def __init__(self, name):
+        self.name = name
+        self.cart = Cart()
+        self.history = []
+
+    def add_history(self, action):
+        self.history.append(action)
+
+
+class StoreApp:
+    def __init__(self):
+        self.user = None
+        self.shop = Shop()
+        self.is_running = True
+
+    def start(self):
+        name = input("Введите ваше имя: ")
+        self.user = User(name)
+
+        print(f"Добро пожаловать, {name}!")
+        self.show_help()
+
+        while self.is_running:
+            command = input("\nВведите команду: ")
+            self.process_command(command)
+
+    def process_command(self, command):
+
+        if command == "товары":
+            self.shop.show_products()
+
+        elif command == "корзина":
+            self.user.cart.show()
+
+        elif command == "добавить":
+            name = input("Введите название товара: ")
+            product = self.shop.get_product_by_name(name)
+
+            if product:
+                self.user.cart.add(product)
+                self.user.add_history(f"Добавил {name}")
+            else:
+                print("Такого товара нет")
+
+        elif command == "удалить":
+            name = input("Введите название товара: ")
+            self.user.cart.remove(name)
+            self.user.add_history(f"Удалил {name}")
+
+        elif command == "заказать":
+            total = self.user.cart.get_total()
+
+            if total == 0:
+                print("Корзина пустая")
+            else:
+                print(f"Заказ оформлен. Сумма: {total}")
+                self.user.cart.clear()
+                self.user.add_history("Оформил заказ")
+
+        elif command == "помощь":
+            self.show_help()
+
+        elif command == "выход":
+            self.exit()
+
+        else:
+            print("Неизвестная команда")
+
+    def show_help(self):
+        print("\nКоманды:")
+        print("товары - показать товары")
+        print("корзина - показать корзину")
+        print("добавить - добавить товар")
+        print("удалить - удалить товар")
+        print("заказать - оформить заказ")
+        print("помощь - список команд")
+        print("выход - выйти из программы")
+
+    def exit(self):
+        print("До свидания!")
+        self.is_running = False
+
+
+app = StoreApp()
+app.start()
