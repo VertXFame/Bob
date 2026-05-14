@@ -1,0 +1,189 @@
+import json
+
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout,
+    QListWidget, QPushButton, QLineEdit,
+    QMessageBox, QInputDialog, QLabel, QComboBox
+)
+
+
+class TaskFlow(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.file = "tasks.json"
+        self.tasks = []
+
+        self.setWindowTitle("TaskFlow")
+        self.resize(600, 400)
+
+        layout = QVBoxLayout()
+
+        top = QHBoxLayout()
+
+        self.input = QLineEdit()
+        self.input.setPlaceholderText("Новая задача")
+        self.input.returnPressed.connect(self.add_task)
+
+        self.add_btn = QPushButton("Добавить")
+        self.add_btn.clicked.connect(self.add_task)
+
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Поиск")
+        self.search.textChanged.connect(self.update_list)
+
+        top.addWidget(self.input)
+        top.addWidget(self.add_btn)
+        top.addWidget(self.search)
+
+        self.list = QListWidget()
+        self.list.itemDoubleClicked.connect(self.edit_task)
+
+        bottom = QHBoxLayout()
+
+        self.filter = QComboBox()
+        self.filter.addItems(["Все", "Выполненные", "Невыполненные"])
+        self.filter.currentTextChanged.connect(self.update_list)
+
+        self.info = QLabel()
+
+        bottom.addWidget(self.filter)
+        bottom.addStretch()
+        bottom.addWidget(self.info)
+
+        buttons = QHBoxLayout()
+
+        self.done_btn = QPushButton("✓")
+        self.done_btn.clicked.connect(self.toggle_done)
+
+        self.edit_btn = QPushButton("Изменить")
+        self.edit_btn.clicked.connect(self.edit_task)
+
+        self.del_btn = QPushButton("Удалить")
+        self.del_btn.clicked.connect(self.delete_task)
+
+        buttons.addWidget(self.done_btn)
+        buttons.addWidget(self.edit_btn)
+        buttons.addWidget(self.del_btn)
+
+        layout.addLayout(top)
+        layout.addWidget(self.list)
+        layout.addLayout(buttons)
+        layout.addLayout(bottom)
+
+        self.setLayout(layout)
+
+        self.load()
+        self.update_list()
+
+    def add_task(self):
+        text = self.input.text().strip()
+
+        if not text:
+            QMessageBox.warning(self, "Ошибка", "Введите задачу")
+            return
+
+        self.tasks.append({
+            "title": text,
+            "done": False
+        })
+
+        self.input.clear()
+
+        self.save()
+        self.update_list()
+
+    def update_list(self):
+        self.list.clear()
+
+        self.visible = []
+
+        search = self.search.text().lower()
+        mode = self.filter.currentText()
+
+        for i, task in enumerate(self.tasks):
+
+            if search not in task["title"].lower():
+                continue
+
+            if mode == "Выполненные" and not task["done"]:
+                continue
+
+            if mode == "Невыполненные" and task["done"]:
+                continue
+
+            text = task["title"]
+
+            if task["done"]:
+                text += " ✓"
+
+            self.list.addItem(text)
+            self.visible.append(i)
+
+        self.info.setText(f"Задач: {len(self.visible)}")
+
+    def current_index(self):
+        row = self.list.currentRow()
+
+        if row == -1:
+            return None
+
+        return self.visible[row]
+
+    def toggle_done(self):
+        i = self.current_index()
+
+        if i is None:
+            return
+
+        self.tasks[i]["done"] = not self.tasks[i]["done"]
+
+        self.save()
+        self.update_list()
+
+    def edit_task(self):
+        i = self.current_index()
+
+        if i is None:
+            return
+
+        text, ok = QInputDialog.getText(
+            self,
+            "Изменить",
+            "Новый текст:",
+            text=self.tasks[i]["title"]
+        )
+
+        if ok and text.strip():
+            self.tasks[i]["title"] = text.strip()
+
+            self.save()
+            self.update_list()
+
+    def delete_task(self):
+        i = self.current_index()
+
+        if i is None:
+            return
+
+        del self.tasks[i]
+
+        self.save()
+        self.update_list()
+
+    def save(self):
+        with open(self.file, "w", encoding="utf-8") as f:
+            json.dump(self.tasks, f, ensure_ascii=False, indent=4)
+
+    def load(self):
+        try:
+            with open(self.file, "r", encoding="utf-8") as f:
+                self.tasks = json.load(f)
+
+        except:
+            self.tasks = []
+
+app = QApplication([])
+window = TaskFlow()
+window.show()
+app.exec_()
